@@ -20,60 +20,54 @@ if uploaded_file:
 
     if "transcription" not in df.columns:
         df["transcription"] = ""
-
-    df["transcription"] = df["transcription"].fillna("").astype(str)
+    df["transcription"] = df["transcription"].fillna("")
 
     # ── Reset state if new file uploaded ──────────────────
     file_id = uploaded_file.name + str(uploaded_file.size)
-
     if "file_id" not in st.session_state or st.session_state.file_id != file_id:
-        st.session_state.file_id = file_id
-        st.session_state.index = 0
-        st.session_state.data = df.copy()
+        st.session_state.file_id   = file_id
+        st.session_state.index     = 0
+        st.session_state.data      = df.copy()
         st.session_state.input_csv = uploaded_file.name
 
-    data = st.session_state.data
-    idx = st.session_state.index
+    data      = st.session_state.data
+    idx       = st.session_state.index
     input_csv = st.session_state.input_csv
 
-    # ── Download filename ─────────────────────────────────
-    base_name = os.path.splitext(input_csv)[0]
+    # ── Download filename ────────────────────────────────
+    base_name     = os.path.splitext(input_csv)[0]
     download_name = f"labeled_{base_name}.csv"
 
-    # ── Sidebar ───────────────────────────────────────────
-    with st.sidebar:
-        st.markdown("### 📊 Progress")
+    # ── Progress Calculations (FIXED) ────────────────────
+    labeled_count = (data["transcription"].str.strip() != "").sum()
+    total_count   = len(data)
+    progress      = labeled_count / total_count if total_count > 0 else 0
 
-        labeled_mask = data["transcription"].str.strip() != ""
-        labeled_count = labeled_mask.sum()
+    # ── Sidebar ────────────────────────────────────────────
+    # with st.sidebar:
+    #     st.markdown("### 📊 Progress")
 
-        st.metric("Total", len(data))
-        st.metric("Labeled", labeled_count)
-        st.metric("Remaining", len(data) - labeled_count)
+    #     st.metric("Total", total_count)
+    #     st.metric("Labeled", labeled_count)
+    #     st.metric("Remaining", total_count - labeled_count)
 
-        st.progress(labeled_count / len(data))
-        st.caption(f"{labeled_count}/{len(data)} labeled")
+    #     st.divider()
 
-        st.divider()
+    #     st.markdown("### 🔢 Jump to Row")
+    #     jump = st.number_input(
+    #         "Row number",
+    #         min_value=1,
+    #         max_value=total_count,
+    #         value=min(idx + 1, total_count),
+    #     )
+    #     if st.button("Go"):
+    #         st.session_state.index = jump - 1
+    #         st.rerun()
 
-        st.markdown("### 🔢 Jump to Row")
-        jump = st.number_input(
-            "Row number",
-            min_value=1,
-            max_value=len(data),
-            value=min(idx + 1, len(data)),
-        )
-
-        if st.button("Go"):
-            st.session_state.index = jump - 1
-            st.rerun()
-
-    # ── Completed ─────────────────────────────────────────
-    if labeled_count == len(data):
+    # ── Completed ──────────────────────────────────────────
+    if idx >= total_count:
         st.success("✅ All audio files labeled!")
-
         csv_bytes = data.to_csv(index=False).encode("utf-8")
-
         st.download_button(
             label="📥 Download Labeled CSV",
             data=csv_bytes,
@@ -82,13 +76,13 @@ if uploaded_file:
         )
         st.stop()
 
-    # ── Current Row ───────────────────────────────────────
+    # ── Current Row ────────────────────────────────────────
     row = data.iloc[idx]
 
-    st.markdown(f"### 🎵 Audio {idx + 1} / {len(data)}")
+    st.markdown(f"### 🎵 Audio {idx + 1} / {total_count}")
     st.write(f"**File:** `{row['audio_name']}`")
 
-    # ── Audio Player ──────────────────────────────────────
+    # ── Audio Player ───────────────────────────────────────
     try:
         audio_bytes = requests.get(row["audio_link"], timeout=10).content
         st.audio(audio_bytes)
@@ -96,38 +90,40 @@ if uploaded_file:
         st.warning(f"Could not load audio: {e}")
         st.markdown(f"[🔗 Open audio link]({row['audio_link']})")
 
-    # ── Transcription Input ───────────────────────────────
-    key_name = f"transcription_{row['audio_name']}"
-    current_value = data.at[idx, "transcription"]
+    # ── Transcription Input ────────────────────────────────
+    current_transcription = str(data.at[idx, "transcription"])
 
     transcription = st.text_area(
-        "✍️ Please review or fill if empty",
-        value=current_value,
+        "✍️ Please review or fill transcription",
+        value=current_transcription,
         height=150,
         placeholder="Type transcription here...",
-        key=key_name,
+        key=f"transcription_{idx}",
     )
 
-    # ✅ Auto-save (important fix)
-    st.session_state.data.at[idx, "transcription"] = transcription
 
-    # ── Navigation Buttons ────────────────────────────────
+    st.markdown("###  Progress")
+    nav_progress = (idx + 1) / total_count if total_count > 0 else 0
+    st.progress(nav_progress)
+    st.caption(f" Position: {idx + 1} / {total_count}")
+
+    # ── Navigation Buttons ─────────────────────────────────
     col1, col2, col3 = st.columns(3)
 
     with col1:
         if st.button("⬅️ Back", disabled=idx == 0):
+            st.session_state.data.at[idx, "transcription"] = transcription
             st.session_state.index = max(0, idx - 1)
             st.rerun()
 
     with col2:
         if st.button("⏭️ Skip"):
-            st.session_state.index = min(len(data) - 1, idx + 1)
+            st.session_state.data.at[idx, "transcription"] = transcription
+            st.session_state.index += 1
             st.rerun()
 
     with col3:
         if st.button("✅ Submit & Next", type="primary"):
-            st.session_state.index = min(len(data) - 1, idx + 1)
+            st.session_state.data.at[idx, "transcription"] = transcription
+            st.session_state.index += 1
             st.rerun()
-
-# Run using:
-# streamlit run app.py
