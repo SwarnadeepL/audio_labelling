@@ -13,14 +13,14 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
     # Required columns check
-    required_cols = {"audio_name", "audio_link"}
+    required_cols = {"Audio_Name", "Audio_Link"}
     if not required_cols.issubset(df.columns):
         st.error(f"CSV must contain columns: {required_cols}")
         st.stop()
 
-    if "transcription" not in df.columns:
-        df["transcription"] = ""
-    df["transcription"] = df["transcription"].fillna("")
+    if "Transcription" not in df.columns:
+        df["Transcription"] = ""
+    df["Transcription"] = df["Transcription"].fillna("")
 
     # ── Reset state if new file uploaded ──────────────────
     file_id = uploaded_file.name + str(uploaded_file.size)
@@ -39,30 +39,9 @@ if uploaded_file:
     download_name = f"labeled_{base_name}.csv"
 
     # ── Progress Calculations (FIXED) ────────────────────
-    labeled_count = (data["transcription"].str.strip() != "").sum()
+    labeled_count = (data["Transcription"].str.strip() != "").sum()
     total_count   = len(data)
     progress      = labeled_count / total_count if total_count > 0 else 0
-
-    # ── Sidebar ────────────────────────────────────────────
-    # with st.sidebar:
-    #     st.markdown("### 📊 Progress")
-
-    #     st.metric("Total", total_count)
-    #     st.metric("Labeled", labeled_count)
-    #     st.metric("Remaining", total_count - labeled_count)
-
-    #     st.divider()
-
-    #     st.markdown("### 🔢 Jump to Row")
-    #     jump = st.number_input(
-    #         "Row number",
-    #         min_value=1,
-    #         max_value=total_count,
-    #         value=min(idx + 1, total_count),
-    #     )
-    #     if st.button("Go"):
-    #         st.session_state.index = jump - 1
-    #         st.rerun()
 
     # ── Completed ──────────────────────────────────────────
     if idx >= total_count:
@@ -80,25 +59,25 @@ if uploaded_file:
     row = data.iloc[idx]
 
     st.markdown(f"### 🎵 Audio {idx + 1} / {total_count}")
-    st.write(f"**File:** `{row['audio_name']}`")
+    st.write(f"**File:** `{row['Audio_Name']}`")
 
     # ── Audio Player ───────────────────────────────────────
     try:
-        audio_bytes = requests.get(row["audio_link"], timeout=10).content
+        audio_bytes = requests.get(row["Audio_Link"], timeout=10).content
         st.audio(audio_bytes)
     except Exception as e:
         st.warning(f"Could not load audio: {e}")
-        st.markdown(f"[🔗 Open audio link]({row['audio_link']})")
+        st.markdown(f"[🔗 Open audio link]({row['Audio_Link']})")
 
-    # ── Transcription Input ────────────────────────────────
-    current_transcription = str(data.at[idx, "transcription"])
+    # ── transcription Input ────────────────────────────────
+    current_transcription = str(data.at[idx, "Transcription"])
 
-    transcription = st.text_area(
-        "✍️ Please review or fill transcription",
+    Transcription = st.text_area(
+        "✍️ Please review or fill Transcription",
         value=current_transcription,
         height=150,
         placeholder="Type transcription here...",
-        key=f"transcription_{idx}",
+        key=f"Transcription_{idx}",
     )
 
 
@@ -112,18 +91,18 @@ if uploaded_file:
 
     with col1:
         if st.button("⬅️ Back", disabled=idx == 0):
-            st.session_state.data.at[idx, "transcription"] = transcription
+            st.session_state.data.at[idx, "Transcription"] = Transcription
             st.session_state.index = max(0, idx - 1)
             st.rerun()
 
     with col2:
         if st.button("⏭️ Skip"):
-            st.session_state.data.at[idx, "transcription"] = transcription
+            st.session_state.data.at[idx, "Transcription"] = Transcription
             st.session_state.index += 1
             st.rerun()
 
     with col3:
         if st.button("✅ Submit & Next", type="primary"):
-            st.session_state.data.at[idx, "transcription"] = transcription
+            st.session_state.data.at[idx, "Transcription"] = Transcription
             st.session_state.index += 1
             st.rerun()
