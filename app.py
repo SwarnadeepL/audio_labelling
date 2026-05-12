@@ -10,8 +10,12 @@ st.title("🎧 Audio Labeling App")
 # ── Upload Excel ───────────────────────────────────────────
 uploaded_file = st.file_uploader("Upload Excel", type=["xlsx"])
 
-if uploaded_file:
-    df = pd.read_excel(uploaded_file)
+if uploaded_file is not None:
+    try:
+        df = pd.read_excel(uploaded_file, engine="openpyxl")
+    except Exception as e:
+        st.error(f"Error reading Excel file: {e}")
+        st.stop()
 
     # Required columns check
     required_cols = {"Audio_Name", "Audio_Link"}
@@ -62,7 +66,7 @@ if uploaded_file:
             data.to_excel(writer, index=False)
 
         output.seek(0)
-
+    
         st.download_button(
             label="📥 Download Labeled Excel",
             data=output,
