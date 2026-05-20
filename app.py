@@ -24,10 +24,10 @@ if uploaded_file is not None:
         st.stop()
 
     # Create column if missing
-    if "Transcription" not in df.columns:
-        df["Transcription"] = ""
+    if "Ground_Truth" not in df.columns:
+        df["Ground_Truth"] = ""
 
-    df["Transcription"] = df["Transcription"].fillna("")
+    df["Ground_Truth"] = df["Ground_Truth"].fillna("")
 
     # ── Reset state if new file uploaded ──────────────────
     file_id = uploaded_file.name + str(uploaded_file.size)
@@ -47,7 +47,7 @@ if uploaded_file is not None:
     download_name = f"labeled_{base_name}.xlsx"
 
     # ── Progress Calculations ─────────────────────────────
-    labeled_count = (data["Transcription"].str.strip() != "").sum()
+    labeled_count = (data["Ground_Truth"].str.strip() != "").sum()
     total_count = len(data)
     progress = labeled_count / total_count if total_count > 0 else 0
 
@@ -90,15 +90,15 @@ if uploaded_file is not None:
         st.warning(f"Could not load audio: {e}")
         st.markdown(f"[🔗 Open audio link]({row['Audio_Link']})")
 
-    # ── Transcription Input ───────────────────────────────
-    current_transcription = str(data.at[idx, "Transcription"])
+    # ── Ground_Truth Input ───────────────────────────────
+    current_Ground_Truth = str(data.at[idx, "Ground_Truth"])
 
-    transcription = st.text_area(
-        "✍️ Please review or fill transcription",
-        value=current_transcription,
+    Ground_Truth = st.text_area(
+        "✍️ Please review or fill Ground_Truth",
+        value=current_Ground_Truth,
         height=150,
-        placeholder="Type transcription here...",
-        key=f"Transcription_{idx}",
+        placeholder="Type Ground_Truth here...",
+        key=f"Ground_Truth_{idx}",
     )
 
     # ── Navigation Progress ───────────────────────────────
@@ -112,18 +112,18 @@ if uploaded_file is not None:
 
     with col1:
         if st.button("⬅️ Back", disabled=idx == 0):
-            st.session_state.data.at[idx, "Transcription"] = transcription
+            st.session_state.data.at[idx, "Ground_Truth"] = Ground_Truth
             st.session_state.index = max(0, idx - 1)
             st.rerun()
 
     with col2:
         if st.button("⏭️ Skip"):
-            st.session_state.data.at[idx, "Transcription"] = transcription
+            st.session_state.data.at[idx, "Ground_Truth"] = Ground_Truth
             st.session_state.index += 1
             st.rerun()
 
     with col3:
         if st.button("✅ Submit & Next", type="primary"):
-            st.session_state.data.at[idx, "Transcription"] = transcription
+            st.session_state.data.at[idx, "Ground_Truth"] = Ground_Truth
             st.session_state.index += 1
             st.rerun()
